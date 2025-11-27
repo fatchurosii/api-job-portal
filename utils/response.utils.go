@@ -60,8 +60,8 @@ func forbiddenResponse(c echo.Context, message string, errors interface{}) error
 	return errorResponse(c, http.StatusForbidden, message, errors)
 }
 
-func internalServerErrorResponse(c echo.Context, message string, errors interface{}) error {
-	return errorResponse(c, http.StatusInternalServerError, message, errors)
+func InternalServerErrorResponse(c echo.Context, message string, err interface{}) error {
+	return errorResponse(c, http.StatusInternalServerError, message, err)
 }
 
 func unprocessableEntityResponse(c echo.Context, message string, errors interface{}) error {

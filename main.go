@@ -1,6 +1,7 @@
 package main
 
 import (
+	"JobPortal/routes"
 	"context"
 	"log"
 	"net/http"
@@ -40,6 +41,8 @@ func main() {
 		data, statusCode := healthCheck(c.Request().Context())
 		return utils.SuccessResponse(c, statusCode, "Health Check", data)
 	})
+
+	routes.RegisterAllRoutes(e, database.DB)
 
 	port := os.Getenv("APP_PORT")
 	if port == "" {
