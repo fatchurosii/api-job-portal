@@ -16,4 +16,5 @@ func registerJobTypeRoute(e *echo.Group, db *sql.DB) {
 
 	group := e.Group("/job-types")
 	group.GET("", h.GetAllJobType)
+	group.GET("/:id", h.GetJobTypeById)
 }

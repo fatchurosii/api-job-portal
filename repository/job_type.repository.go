@@ -8,7 +8,7 @@ import (
 
 type JobTypeRepository interface {
 	GetAllJobTypes(ctx context.Context) ([]*models.JobType, error)
-	//getJobTypeById(id string) (*models.JobTypes, error)
+	GetJobTypeById(ctx context.Context, id string) (*models.JobType, error)
 	//storeJobTypes(jobTypes *models.JobTypes) error
 }
 
@@ -69,4 +69,50 @@ func (repo *JobTypeRepositoryImpl) GetAllJobTypes(ctx context.Context) ([]*model
 	}
 
 	return result, nil
+}
+
+func (repo *JobTypeRepositoryImpl) GetJobTypeById(ctx context.Context, id string) (*models.JobType, error) {
+	const q = `
+	SELECT
+	    id,
+	    name,
+	    slug,
+	    is_active,
+	    created_at,
+	    updated_at,
+	    deleted_at
+	FROM job_types
+	WHERE id = $1
+	  AND deleted_at IS NULL
+	LIMIT 1
+	`
+	row := repo.DB.QueryRowContext(ctx, q, id)
+	var jt models.JobType
+	var deletedAt sql.NullTime
+
+	if err := row.Scan(
+		&jt.Id,
+		&jt.Name,
+		&jt.Slug,
+		&jt.IsActive,
+		&jt.CreatedAt,
+		&jt.UpdatedAt,
+		&deletedAt,
+	); err != nil {
+
+		if err == sql.ErrNoRows {
+			return nil, nil
+		}
+
+		return nil, err
+	}
+
+	if deletedAt.Valid {
+		ts := deletedAt.Time
+		jt.DeletedAt = &ts
+	} else {
+		jt.DeletedAt = nil
+	}
+
+	return &jt, nil
 }

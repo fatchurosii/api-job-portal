@@ -44,7 +44,7 @@ func errorResponse(c echo.Context, statusCode int, message string, errors interf
 	return c.JSON(statusCode, response)
 }
 
-func badRequestResponse(c echo.Context, message string, errors interface{}) error {
+func BadRequestResponse(c echo.Context, message string, errors interface{}) error {
 	return errorResponse(c, http.StatusBadRequest, message, errors)
 }
 
@@ -52,7 +52,7 @@ func unauthorizedResponse(c echo.Context, message string, errors interface{}) er
 	return errorResponse(c, http.StatusUnauthorized, message, errors)
 }
 
-func notFoundResponse(c echo.Context, message string, errors interface{}) error {
+func NotFoundResponse(c echo.Context, message string, errors interface{}) error {
 	return errorResponse(c, http.StatusNotFound, message, errors)
 }
 

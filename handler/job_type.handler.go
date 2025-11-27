@@ -49,3 +49,28 @@ func (h *JobTypeHandlerImpl) GetAllJobType(c echo.Context) error {
 	return utils.SuccessResponse(c, http.StatusOK, "Data retrieve successfully", jobTypes)
 
 }
+
+func (h *JobTypeHandlerImpl) GetJobTypeById(c echo.Context) error {
+	ctx := c.Request().Context()
+	reqID := getRequestID(c)
+
+	id := c.Param("id")
+
+	if id == "" {
+		c.Logger().Warnf("GetJobTypeById missing id (request_id=%s)", reqID)
+		return utils.BadRequestResponse(c, "id is required", nil)
+	}
+	jobType, err := h.jobTypeService.GetJobTypeById(ctx, id)
+
+	if err != nil {
+		c.Logger().Errorf("GetJobTypeById failed: %v (request_id=%s)", err, reqID)
+		return utils.InternalServerErrorResponse(c, "failed to retrieve job type", err.Error())
+	}
+
+	if jobType == nil {
+		c.Logger().Infof("GetJobTypeById not found: %s (request_id=%s)", id, reqID)
+		return utils.NotFoundResponse(c, "job type not found", nil)
+	}
+
+	return utils.SuccessResponse(c, http.StatusOK, "Data retrieved successfully", jobType)
+}
