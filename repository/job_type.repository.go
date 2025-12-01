@@ -15,6 +15,7 @@ type JobTypeRepository interface {
 	GetJobTypeById(ctx context.Context, id string) (*models.JobType, error)
 	StoreJobType(ctx context.Context, jobType *models.JobType) (*models.JobType, error)
 	UpdateJobType(ctx context.Context, jobType *models.JobType) (*models.JobType, error)
+	DeleteJobType(ctx context.Context, id string) error
 }
 
 type JobTypeRepositoryImpl struct {
@@ -226,4 +227,45 @@ func (repo *JobTypeRepositoryImpl) UpdateJobType(ctx context.Context, jobType *m
 	jobType.UpdatedAt = updatedAt
 
 	return jobType, nil
+}
+
+func (repo *JobTypeRepositoryImpl) DeleteJobType(ctx context.Context, id string) error {
+	if id == "" {
+		return fmt.Errorf("jobType id is empty")
+	}
+
+	existing, err := repo.GetJobTypeById(ctx, id)
+	if err != nil {
+		return err
+	}
+	if existing == nil {
+		return sql.ErrNoRows
+	}
+
+	del := sqlbuilder.NewUpdateBuilder()
+	del.Update(repo.table)
+	del.Set(
+		del.Assign("deleted_at", time.Now()),
+	)
+	del.Where(del.Equal("id", id))
+	query, args := del.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	query = query + " RETURNING id, deleted_at"
+	fmt.Println("SQL:", query)
+	fmt.Printf("Args: %#v\n", args)
+
+	row, err := repo.DB.ExecContext(ctx, query, args...)
+
+	if err != nil {
+		return fmt.Errorf("soft delete job_type failed: %w", err)
+	}
+
+	ra, err := row.RowsAffected()
+	if err != nil {
+		return fmt.Errorf("soft delete job_type failed to get rows affected: %w", err)
+	}
+	if ra == 0 {
+		return sql.ErrNoRows
+	}
+
+	return nil
 }

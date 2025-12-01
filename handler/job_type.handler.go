@@ -160,3 +160,32 @@ func (h *JobTypeHandlerImpl) UpdateJobType(c echo.Context) (*models.JobType, err
 
 	return updated, nil
 }
+
+func (h *JobTypeHandlerImpl) DeleteJobType(c echo.Context) error {
+	ctx := c.Request().Context()
+	reqID := getRequestID(c)
+
+	id := strings.TrimSpace(c.Param("id"))
+	if _, err := uuid.Parse(id); err != nil {
+		c.Logger().Warnf("DeleteJobType invalid id format: %v (request_id=%s)", err, reqID)
+		return utils.BadRequestResponse(c, "id must be a valid uuid", nil)
+	}
+
+	jobType, err := h.jobTypeService.GetJobTypeById(ctx, id)
+	if err != nil {
+		c.Logger().Errorf("GetJobType failed: %v (request_id=%s)", err, reqID)
+		return utils.NotFoundResponse(c, "job type not found", nil)
+	}
+	if jobType == nil {
+		c.Logger().Infof("GetJobType not found: %s (request_id=%s)", id, reqID)
+		return utils.NotFoundResponse(c, "job type not found", nil)
+	}
+
+	if err := h.jobTypeService.DeleteJobType(ctx, jobType.Id); err != nil {
+		c.Logger().Errorf("DeleteJobType service error: %v (request_id=%s)", err, reqID)
+		return utils.InternalServerErrorResponse(c, "Failed to delete job type", err.Error())
+	}
+
+	c.Logger().Infof("DeleteJobType id=%s (request_id=%s)", id, reqID)
+	return utils.SuccessResponse(c, http.StatusOK, "Job Type Successfully deleted", nil)
+}

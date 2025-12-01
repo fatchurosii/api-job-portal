@@ -17,14 +17,14 @@ func registerJobTypeRoute(e *echo.Group, db *sql.DB) {
 	group := e.Group("/job-types")
 	group.GET("", h.GetAllJobType)
 	group.GET("/:id", h.GetJobTypeById)
-
 	group.POST("", func(c echo.Context) error {
 		_, err := h.StoreJobType(c)
 		return err
 	})
-
 	group.PUT("/:id", func(c echo.Context) error {
 		_, err := h.UpdateJobType(c)
 		return err
 	})
+	group.DELETE("/:id", h.DeleteJobType)
+
 }

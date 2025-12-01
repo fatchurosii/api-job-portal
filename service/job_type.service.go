@@ -12,6 +12,7 @@ type JobTypeService interface {
 	GetJobTypeById(ctx context.Context, id string) (*models.JobType, error)
 	StoreJobType(ctx context.Context, jobType *models.JobType) (*models.JobType, error)
 	UpdateJobType(ctx context.Context, jobType *models.JobType) (*models.JobType, error)
+	DeleteJobType(ctx context.Context, id string) error
 }
 type JobTypeServiceImpl struct {
 	JobTypeRepo repository.JobTypeRepository
@@ -35,4 +36,8 @@ func (s *JobTypeServiceImpl) StoreJobType(ctx context.Context, jobType *models.J
 
 func (s *JobTypeServiceImpl) UpdateJobType(ctx context.Context, jobType *models.JobType) (*models.JobType, error) {
 	return s.JobTypeRepo.UpdateJobType(ctx, jobType)
+}
+
+func (s *JobTypeServiceImpl) DeleteJobType(ctx context.Context, id string) error {
+	return s.JobTypeRepo.DeleteJobType(ctx, id)
 }
