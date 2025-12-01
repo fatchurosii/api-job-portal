@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
 
 	"github.com/huandu/go-sqlbuilder"
 )
@@ -12,18 +13,20 @@ import (
 type JobTypeRepository interface {
 	GetAllJobTypes(ctx context.Context) ([]*models.JobType, error)
 	GetJobTypeById(ctx context.Context, id string) (*models.JobType, error)
-	//storeJobTypes(jobTypes *models.JobTypes) error
+	StoreJobType(ctx context.Context, jobType *models.JobType) (*models.JobType, error)
 }
 
 type JobTypeRepositoryImpl struct {
-	DB *sql.DB
+	DB    *sql.DB
+	table string
 }
 
-func NewJobTypeRepository(db *sql.DB) JobTypeRepository {
-	return &JobTypeRepositoryImpl{DB: db}
+func NewJobTypeRepository(db *sql.DB) *JobTypeRepositoryImpl {
+	return &JobTypeRepositoryImpl{
+		DB:    db,
+		table: (&models.JobType{}).TableName(),
+	}
 }
-
-var table = (&models.JobType{}).TableName()
 
 func (repo *JobTypeRepositoryImpl) GetAllJobTypes(ctx context.Context) ([]*models.JobType, error) {
 
@@ -35,7 +38,7 @@ func (repo *JobTypeRepositoryImpl) GetAllJobTypes(ctx context.Context) ([]*model
 		"created_at",
 		"updated_at",
 		"deleted_at",
-	).From(table).
+	).From(repo.table).
 		Where("deleted_at IS NULL").
 		Limit(10)
 
@@ -93,7 +96,7 @@ func (repo *JobTypeRepositoryImpl) GetJobTypeById(ctx context.Context, id string
 
 	sel := sqlbuilder.NewSelectBuilder()
 	sel.Select("*").
-		From(table).
+		From(repo.table).
 		Where(sel.Equal("id", id)).
 		Limit(1)
 
@@ -131,4 +134,42 @@ func (repo *JobTypeRepositoryImpl) GetJobTypeById(ctx context.Context, id string
 	}
 
 	return &jt, nil
+}
+
+func (repo *JobTypeRepositoryImpl) StoreJobType(ctx context.Context, jobType *models.JobType) (*models.JobType, error) {
+	if jobType == nil {
+		return nil, fmt.Errorf("jobType is nil")
+	}
+
+	jobType.PrepareForCreate()
+
+	ins := sqlbuilder.NewInsertBuilder()
+	ins.InsertInto(repo.table)
+	ins.Cols("name", "slug", "is_active")
+	ins.Values(jobType.Name, jobType.Slug, jobType.IsActive)
+
+	query, args := ins.BuildWithFlavor(sqlbuilder.PostgreSQL)
+
+	query = query + " RETURNING id, created_at, updated_at"
+
+	fmt.Println("SQL:", query)
+	fmt.Printf("Args: %#v\n", args)
+
+	row := repo.DB.QueryRowContext(ctx, query, args...)
+
+	var id string
+	var createdAt time.Time
+	var updatedAt time.Time
+	if err := row.Scan(&id, &createdAt, &updatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("insert succeeded but no row returned")
+		}
+		return nil, fmt.Errorf("insert job_type failed: %w", err)
+	}
+
+	jobType.Id = id
+	jobType.CreatedAt = createdAt
+	jobType.UpdatedAt = updatedAt
+
+	return jobType, nil
 }

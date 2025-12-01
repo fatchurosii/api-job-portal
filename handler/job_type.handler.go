@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"JobPortal/models"
 	"JobPortal/service"
 	"JobPortal/utils"
 	"net/http"
@@ -74,4 +75,37 @@ func (h *JobTypeHandlerImpl) GetJobTypeById(c echo.Context) error {
 	}
 
 	return utils.SuccessResponse(c, http.StatusOK, "Data retrieved successfully", jobType)
+}
+
+func (h *JobTypeHandlerImpl) StoreJobType(c echo.Context) (*models.JobType, error) {
+	ctx := c.Request().Context()
+	reqID := getRequestID(c)
+
+	var input models.CreateJobTypeInput
+	if err := c.Bind(&input); err != nil {
+		c.Logger().Errorf("StoreJobType bind failed: %v (request_id=%s)", err, reqID)
+		return nil, utils.BadRequestResponse(c, "invalid payload", nil)
+	}
+
+	if verrs := utils.ValidateStruct(input); verrs != nil {
+		c.Logger().Warnf("StoreJobType validation failed (request_id=%s) errors=%v", reqID, verrs)
+		return nil, utils.BadRequestResponse(c, "validation failed", verrs)
+	}
+
+	newJobType := &models.JobType{
+		Name: input.Name,
+		Slug: input.Slug,
+	}
+
+	created, err := h.jobTypeService.StoreJobType(ctx, newJobType)
+	if err != nil {
+		c.Logger().Errorf("StoreJobType service error: %v (request_id=%s)", err, reqID)
+		return nil, utils.InternalServerErrorResponse(c, "Failed to store job type", err.Error())
+	}
+
+	c.Logger().Infof("StoreJobType created id=%s (request_id=%s)", created.Id, reqID)
+
+	_ = utils.SuccessResponse(c, http.StatusCreated, "Job Type Successfully created", created)
+
+	return created, nil
 }

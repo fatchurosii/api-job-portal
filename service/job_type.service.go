@@ -10,6 +10,7 @@ import (
 type JobTypeService interface {
 	GetAllJobTypes(ctx context.Context) ([]*models.JobType, error)
 	GetJobTypeById(ctx context.Context, id string) (*models.JobType, error)
+	StoreJobType(ctx context.Context, jobType *models.JobType) (*models.JobType, error)
 }
 type JobTypeServiceImpl struct {
 	JobTypeRepo repository.JobTypeRepository
@@ -25,4 +26,8 @@ func (s *JobTypeServiceImpl) GetAllJobTypes(ctx context.Context) ([]*models.JobT
 
 func (s *JobTypeServiceImpl) GetJobTypeById(ctx context.Context, id string) (*models.JobType, error) {
 	return s.JobTypeRepo.GetJobTypeById(ctx, id)
+}
+
+func (s *JobTypeServiceImpl) StoreJobType(ctx context.Context, jobType *models.JobType) (*models.JobType, error) {
+	return s.JobTypeRepo.StoreJobType(ctx, jobType)
 }
