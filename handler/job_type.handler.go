@@ -5,7 +5,9 @@ import (
 	"JobPortal/service"
 	"JobPortal/utils"
 	"net/http"
+	"strings"
 
+	"github.com/google/uuid"
 	"github.com/labstack/echo/v4"
 )
 
@@ -108,4 +110,53 @@ func (h *JobTypeHandlerImpl) StoreJobType(c echo.Context) (*models.JobType, erro
 	_ = utils.SuccessResponse(c, http.StatusCreated, "Job Type Successfully created", created)
 
 	return created, nil
+}
+
+func (h *JobTypeHandlerImpl) UpdateJobType(c echo.Context) (*models.JobType, error) {
+	ctx := c.Request().Context()
+	reqID := getRequestID(c)
+	id := strings.TrimSpace(c.Param("id"))
+
+	if id == "" {
+		c.Logger().Warnf("UpdateJobType missing id (request_id=%s)", reqID)
+		return nil, utils.BadRequestResponse(c, "id is required", nil)
+	}
+
+	if _, err := uuid.Parse(id); err != nil {
+		c.Logger().Warnf("UpdateJobType invalid id format: %v (request_id=%s)", err, reqID)
+		return nil, utils.BadRequestResponse(c, "id must be a valid uuid", nil)
+	}
+
+	var input models.CreateJobTypeInput
+	if err := c.Bind(&input); err != nil {
+		c.Logger().Errorf("UpdateJobType bind failed: %v (request_id=%s)", err, reqID)
+		return nil, utils.BadRequestResponse(c, "invalid payload", nil)
+	}
+
+	if verrs := utils.ValidateStruct(input); verrs != nil {
+		c.Logger().Warnf("UpdateJobType validation failed (request_id=%s) errors=%v", reqID, verrs)
+		return nil, utils.BadRequestResponse(c, "validation failed", verrs)
+	}
+
+	newJobType := &models.JobType{
+		Id:   id,
+		Name: input.Name,
+		Slug: input.Slug,
+	}
+
+	updated, err := h.jobTypeService.UpdateJobType(ctx, newJobType)
+	if err != nil {
+		c.Logger().Errorf("UpdateJobType service error: %v (request_id=%s)", err, reqID)
+		return nil, utils.InternalServerErrorResponse(c, "Failed to update job type", err.Error())
+	}
+
+	if updated == nil {
+		c.Logger().Infof("UpdateJobType not found id=%s (request_id=%s)", id, reqID)
+		return nil, utils.NotFoundResponse(c, "job type not found", nil)
+	}
+
+	c.Logger().Infof("UpdateJobType updated id=%s (request_id=%s)", updated.Id, reqID)
+	_ = utils.SuccessResponse(c, http.StatusOK, "Job Type Successfully updated", updated)
+
+	return updated, nil
 }

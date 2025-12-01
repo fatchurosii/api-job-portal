@@ -22,4 +22,9 @@ func registerJobTypeRoute(e *echo.Group, db *sql.DB) {
 		_, err := h.StoreJobType(c)
 		return err
 	})
+
+	group.PUT("/:id", func(c echo.Context) error {
+		_, err := h.UpdateJobType(c)
+		return err
+	})
 }
