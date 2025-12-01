@@ -189,3 +189,49 @@ func (h *JobTypeHandlerImpl) DeleteJobType(c echo.Context) error {
 	c.Logger().Infof("DeleteJobType id=%s (request_id=%s)", id, reqID)
 	return utils.SuccessResponse(c, http.StatusOK, "Job Type Successfully deleted", nil)
 }
+
+func (h *JobTypeHandlerImpl) ChangeStatusJobType(c echo.Context) (*models.JobType, error) {
+	ctx := c.Request().Context()
+	reqID := getRequestID(c)
+	id := strings.TrimSpace(c.Param("id"))
+	if id == "" {
+		c.Logger().Warnf("ChangeStatusJobType missing id (request_id=%s)", reqID)
+		return nil, utils.BadRequestResponse(c, "id is required", nil)
+	}
+
+	if _, err := uuid.Parse(id); err != nil {
+		c.Logger().Warnf("ChangeStatusJobType invalid id format: %v (request_id=%s)", err, reqID)
+		return nil, utils.BadRequestResponse(c, "id must be a valid uuid", nil)
+	}
+
+	jobType, err := h.jobTypeService.GetJobTypeById(ctx, id)
+	if err != nil {
+		c.Logger().Errorf("GetJobType failed: %v (request_id=%s)", err, reqID)
+		return nil, utils.NotFoundResponse(c, "job type not found", nil)
+	}
+	if jobType == nil {
+		c.Logger().Infof("GetJobType not found: %s (request_id=%s)", id, reqID)
+		return nil, utils.NotFoundResponse(c, "job type not found", nil)
+	}
+
+	updateStatusJobType := &models.JobType{
+		Id:       id,
+		IsActive: jobType.IsActive,
+	}
+
+	updated, err := h.jobTypeService.ChangeStatusJobType(ctx, updateStatusJobType)
+	if err != nil {
+		c.Logger().Errorf("ChangeStatusJobType service error: %v (request_id=%s)", err, reqID)
+		return nil, utils.InternalServerErrorResponse(c, "Failed to change job type", err.Error())
+	}
+	if updated == nil {
+		c.Logger().Warnf("ChangeStatusJobType service error=%s (request_id=%s)", err, reqID)
+		return nil, utils.NotFoundResponse(c, "Failed to change job type", err.Error())
+	}
+
+	c.Logger().Infof("ChangeStatusJobType updated id=%s (request_id=%s)", updated.Id, reqID)
+
+	_ = utils.SuccessResponse(c, http.StatusOK, "Job Type Successfully changed", updated)
+
+	return updateStatusJobType, nil
+}

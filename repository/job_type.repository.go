@@ -16,6 +16,7 @@ type JobTypeRepository interface {
 	StoreJobType(ctx context.Context, jobType *models.JobType) (*models.JobType, error)
 	UpdateJobType(ctx context.Context, jobType *models.JobType) (*models.JobType, error)
 	DeleteJobType(ctx context.Context, id string) error
+	ChangeStatusJobType(ctx context.Context, jobType *models.JobType) (*models.JobType, error)
 }
 
 type JobTypeRepositoryImpl struct {
@@ -268,4 +269,60 @@ func (repo *JobTypeRepositoryImpl) DeleteJobType(ctx context.Context, id string)
 	}
 
 	return nil
+}
+
+func (repo *JobTypeRepositoryImpl) ChangeStatusJobType(ctx context.Context, jobType *models.JobType) (*models.JobType, error) {
+
+	if jobType == nil {
+		return nil, fmt.Errorf("jobType is nil")
+	}
+
+	if jobType.Id == "" {
+		return nil, fmt.Errorf("jobType id is empty")
+	}
+
+	updatedAt := time.Now()
+
+	newIsActive := !jobType.IsActive
+
+	ub := sqlbuilder.NewUpdateBuilder()
+	ub.Update(repo.table)
+
+	ub.Set(
+		ub.Assign("is_active", newIsActive),
+		ub.Assign("updated_at", updatedAt),
+	)
+	ub.Where(ub.Equal("id", jobType.Id))
+
+	query, args := ub.BuildWithFlavor(sqlbuilder.PostgreSQL)
+	query = query + " RETURNING id, name, slug, is_active, created_at, updated_at"
+
+	fmt.Println("SQL:", query)
+	fmt.Printf("Args: %#v\n", args)
+
+	row := repo.DB.QueryRowContext(ctx, query, args...)
+
+	var (
+		id           string
+		name         string
+		slug         string
+		isActive     bool
+		createdAt    time.Time
+		newUpdatedAt time.Time
+	)
+
+	if err := row.Scan(&id, &name, &slug, &isActive, &createdAt, &newUpdatedAt); err != nil {
+		if err == sql.ErrNoRows {
+			return nil, fmt.Errorf("change status succeeded but no row returned")
+		}
+		return nil, fmt.Errorf("change status job_type failed: %w", err)
+	}
+
+	jobType.Id = id
+	jobType.Name = name
+	jobType.Slug = slug
+	jobType.IsActive = isActive
+	jobType.CreatedAt = createdAt
+	jobType.UpdatedAt = newUpdatedAt
+	return jobType, nil
 }

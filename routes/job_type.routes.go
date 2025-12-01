@@ -27,4 +27,9 @@ func registerJobTypeRoute(e *echo.Group, db *sql.DB) {
 	})
 	group.DELETE("/:id", h.DeleteJobType)
 
+	group.PATCH("/:id/change-status", func(c echo.Context) error {
+		_, err := h.ChangeStatusJobType(c)
+		return err
+	})
+
 }
