@@ -36,6 +36,7 @@ func (h *JobTypeHandlerImpl) GetAllJobType(c echo.Context) error {
 	ctx := c.Request().Context()
 
 	jobTypes, err := h.jobTypeService.GetAllJobTypes(ctx)
+
 	reqID := getRequestID(c)
 
 	if err != nil {
